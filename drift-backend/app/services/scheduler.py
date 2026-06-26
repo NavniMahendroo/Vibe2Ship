@@ -23,12 +23,6 @@ def generate_rescue_schedule(db: Session, user_id: int) -> List[Dict[str, Any]]:
     active_tasks = (
         db.query(Task)
         .filter(Task.user_id == user_id, Task.status == "active")
-        .order_on(Task.current_deadline.asc()) # Wait, sqlalchemy uses order_by, not order_on. Let's fix that!
-    )
-    # Let's fix order_on to order_by
-    active_tasks = (
-        db.query(Task)
-        .filter(Task.user_id == user_id, Task.status == "active")
         .order_by(Task.current_deadline.asc())
         .all()
     )

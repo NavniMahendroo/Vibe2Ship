@@ -3,7 +3,8 @@ import json
 import base64
 import logging
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 load_dotenv()
 
@@ -13,10 +14,11 @@ logger = logging.getLogger(__name__)
 
 # Config Gemini
 API_KEY = os.getenv("GEMINI_API_KEY", "")
-HAS_API_KEY = bool(API_KEY and API_KEY != "YOUR_GEMINI_API_KEY_HERE")
+HAS_API_KEY = bool(API_KEY and API_KEY != "")
 
+client = None
 if HAS_API_KEY:
-    genai.configure(api_key=API_KEY)
+    client = genai.Client(api_key=API_KEY)
 
 
 def get_fallback_analysis(reason_text: str, history_summary: str) -> dict:
@@ -70,7 +72,7 @@ def analyze_extension_text(reason_text: str, history_summary: str) -> dict:
     Sends the extension text and user's history summary to Gemini.
     Returns: { "tag": str, "reflection": str, "severity": int, "transcription": str }
     """
-    if not HAS_API_KEY:
+    if not HAS_API_KEY or not client:
         return get_fallback_analysis(reason_text, history_summary)
 
     prompt = f"""
@@ -104,10 +106,12 @@ def analyze_extension_text(reason_text: str, history_summary: str) -> dict:
     """
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
+        response = client.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
         )
         
         data = json.loads(response.text.strip())
@@ -128,7 +132,7 @@ def analyze_extension_audio(audio_bytes: bytes, mime_type: str, history_summary:
     Transcribes the audio, classifies the delay, and generates a reflection.
     Returns: { "tag": str, "reflection": str, "severity": int, "transcription": str }
     """
-    if not HAS_API_KEY:
+    if not HAS_API_KEY or not client:
         return get_fallback_analysis("Voice recording submitted.", history_summary)
 
     prompt = f"""
@@ -164,19 +168,21 @@ def analyze_extension_audio(audio_bytes: bytes, mime_type: str, history_summary:
     """
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
         # Structure content array with audio bytes and the text prompt
         contents = [
-            {
-                "mime_type": mime_type,
-                "data": audio_bytes
-            },
+            types.Part.from_bytes(
+                data=audio_bytes,
+                mime_type=mime_type
+            ),
             prompt
         ]
         
-        response = model.generate_content(
-            contents,
-            generation_config={"response_mime_type": "application/json"}
+        response = client.models.generate_content(
+            model='gemini-1.5-flash',
+            contents=contents,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
         )
         
         data = json.loads(response.text.strip())

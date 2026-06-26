@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-drift-bg text-drift-textMuted font-sans antialiased;
+    color-scheme: dark;
+  }
+  
+  /* Custom scrollbars for dark mode */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f0f13;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2a2a3a;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6366f1;
+  }
+}
+
+@layer components {
+  /* Premium Input Field Styling */
+  .drift-input {
+    @apply w-full bg-[#15151e] border border-drift-border rounded-lg px-4 py-2 text-white outline-none focus:border-drift-accent transition-colors duration-200;
+  }
+  
+  /* Premium Hover Card Lift */
+  .drift-card {
+    @apply bg-drift-card border border-drift-border rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1;
+  }
+
+  /* Specific visual treatment for AI output */
+  .ai-response-box {
+    @apply border-l-4 border-drift-accent bg-[#1d1d2b] p-4 rounded-r-xl my-4 text-white relative overflow-hidden;
+  }
+
+  .ai-sparkle-icon {
+    @apply inline-block mr-2 text-drift-accent animate-pulse;
+  }
+  
+  /* Subtle glassmorphism overlays */
+  .drift-glass {
+    @apply bg-opacity-70 bg-drift-card backdrop-blur-md border border-drift-border;
+  }
+}
