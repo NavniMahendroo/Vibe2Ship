@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: drift_db
+    restart: always
+    environment:
+      POSTGRES_USER: drift
+      POSTGRES_PASSWORD: drift
+      POSTGRES_DB: drift
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - drift-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U drift -d drift"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: drift_api
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://drift:drift@db:5432/drift
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - drift-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: drift_pgadmin
+    restart: always
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@drift.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    networks:
+      - drift-network
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
+
+networks:
+  drift-network:
+    name: drift-network

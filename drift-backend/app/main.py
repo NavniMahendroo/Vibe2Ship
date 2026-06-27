@@ -30,6 +30,10 @@ app.include_router(extensions.router)
 app.include_router(schedule.router)
 app.include_router(interventions.router)
 app.include_router(insights.router)
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 
 @app.get("/api")
 def read_root():
