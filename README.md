@@ -1,12 +1,5 @@
 # 🌊 Drift 2.0 — Turn Deadline Extensions Into Behavioral Insights
 
-[![Backend](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Frontend](https://img.shields.io/badge/React_18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
-[![Language](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![AI Engine](https://img.shields.io/badge/Gemini_1.5_Flash-4285F4?style=for-the-badge&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
-[![Database](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org/)
-[![Auth](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)](https://jwt.io/)
-
 **Drift** is a premium, full-stack, AI-driven productivity suite engineered to resolve the **Planning Fallacy** by capturing the psychological and operational friction points behind task deadline extensions. 
 
 Unlike traditional task managers that allow users to silently push deadlines out of sight, Drift logs, tags, and analyzes every single schedule adjustment. By converting extensions into behavioral data, Drift calculates task risk factors dynamically, delivers real-time voice coaching via Gemini 1.5 Flash, and automatically constructs custom Earliest-Deadline-First weekday calendar recovery blocks.

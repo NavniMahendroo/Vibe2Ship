@@ -31,7 +31,6 @@ app.include_router(schedule.router)
 app.include_router(interventions.router)
 app.include_router(insights.router)
 
-
 @app.get("/api")
 def read_root():
     return {
