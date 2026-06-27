@@ -211,6 +211,25 @@ The schema is built using SQLAlchemy models mapped to a local SQLite database (f
    ```
 4. Access the web dashboard at `http://localhost:5173`.
 
+### 3. Containerized Development (Docker & PostgreSQL)
+Drift supports a fully containerized local development environment utilizing Docker Compose to coordinate the API server, a PostgreSQL database, and pgAdmin.
+
+1. Ensure **Docker Desktop** is installed and running on your host system.
+2. In the `drift-backend` directory, build and launch the container suite:
+   ```bash
+   docker compose up --build
+   ```
+3. Once running, the infrastructure exposes:
+   * **FastAPI Server**: `http://localhost:8000` (Healthcheck endpoint: `/health`)
+   * **Interactive API Docs (Swagger)**: `http://localhost:8000/docs`
+   * **PostgreSQL Database**: Port `5432` on `localhost` (Credentials: User: `drift`, Password: `drift`, DB: `drift`)
+   * **pgAdmin Console**: `http://localhost:5050`
+     - **Login Email**: `admin@drift.local`
+     - **Login Password**: `admin`
+     - **Connection Server Host**: `db` (internal Docker hostname)
+
+*Note: The FastAPI container mounts the local backend source directory (`./:/app`), enabling instant hot-reloads inside Docker whenever you make modifications to local code files.*
+
 ---
 
 ## 🔮 Production Roadmap
