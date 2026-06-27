@@ -4,9 +4,10 @@ import { ScheduleBlock } from '../types';
 
 interface ScheduleBlocksProps {
   blocks: ScheduleBlock[];
+  cols?: number;
 }
 
-export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({ blocks }) => {
+export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({ blocks, cols }) => {
   if (blocks.length === 0) {
     return (
       <div className="bg-drift-card border border-drift-border rounded-xl p-8 text-center text-drift-textMuted">
@@ -55,7 +56,7 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({ blocks }) => {
           </div>
 
           {/* Blocks Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={cols === 1 ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"}>
             {dayBlocks.map((block, idx) => {
               const startTime = block.start.split(' ')[1];
               const endTime = block.end.split(' ')[1];
@@ -65,14 +66,14 @@ export const ScheduleBlocks: React.FC<ScheduleBlocksProps> = ({ blocks }) => {
                   key={`${block.start}-${idx}`}
                   className="bg-[#171722] hover:bg-[#1d1d2b] border border-drift-border hover:border-drift-accent hover:border-opacity-40 rounded-xl p-4 transition-all duration-200 flex items-start space-x-3 group cursor-default shadow-md"
                 >
-                  <div className="bg-drift-accent bg-opacity-10 p-2 rounded-lg text-drift-accent group-hover:bg-drift-accent group-hover:text-white transition-colors duration-200">
+                  <div className="bg-drift-accent bg-opacity-10 p-2 rounded-lg text-drift-accent group-hover:bg-drift-accent group-hover:text-white transition-colors duration-200 flex-shrink-0">
                     <Clock className="w-4 h-4" />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <span className="block text-xs font-semibold text-white tracking-wider">
                       {startTime} - {endTime}
                     </span>
-                    <p className="text-xs text-drift-textMuted font-medium truncate mt-1 max-w-[150px]" title={block.label}>
+                    <p className="text-xs text-drift-textMuted font-medium truncate mt-1" title={block.label}>
                       {block.label}
                     </p>
                   </div>

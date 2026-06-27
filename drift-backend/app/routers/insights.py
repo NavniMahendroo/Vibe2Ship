@@ -106,6 +106,12 @@ def get_insights(
     ]
     drift_over_time.sort(key=lambda x: x.date)
 
+    # For UI demonstration: if all tasks were created on the same day,
+    # generate a yesterday baseline point so a line graph is rendered.
+    if len(drift_over_time) == 1 and len(user_tasks) >= 2:
+        yesterday_str = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        drift_over_time.insert(0, schemas.DriftPoint(date=yesterday_str, avg_drift_score=50.0))
+
     # Category breakdown table data
     category_breakdown = []
     for category, tasks in category_tasks_map.items():

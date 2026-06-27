@@ -1,65 +1,54 @@
-# 🌊 Drift 2.0 — Turn Deadline Extensions Into Behavioral Insights
+# 🌊 Drift — AI-Driven Deadline Accountability & Behavioral Analytics Suite
 
-**Drift** is a premium, full-stack, AI-driven productivity suite engineered to resolve the **Planning Fallacy** by capturing the psychological and operational friction points behind task deadline extensions. 
+[![Backend](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Frontend](https://img.shields.io/badge/React_18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Language](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![AI Engine](https://img.shields.io/badge/Gemini_1.5_Flash-4285F4?style=for-the-badge&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
+[![Database](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org/)
+[![Auth](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)](https://jwt.io/)
 
-Unlike traditional task managers that allow users to silently push deadlines out of sight, Drift logs, tags, and analyzes every single schedule adjustment. By converting extensions into behavioral data, Drift calculates task risk factors dynamically, delivers real-time voice coaching via Gemini 1.5 Flash, and automatically constructs custom Earliest-Deadline-First weekday calendar recovery blocks.
+**Drift** is a professional-grade, full-stack productivity engineering suite designed to counteract the **Planning Fallacy** by capturing, logging, and analyzing the behavioral and operational friction points behind task deadline extensions. 
 
----
-
-## 🧠 The Planning Fallacy & Drift's Core Vision
-
-In cognitive psychology, the **Planning Fallacy** (originally proposed by Daniel Kahneman and Amos Tversky) is a phenomenon where predictions about how much time will be needed to complete a future task display an optimistic bias and underestimate the time needed.
-
-Standard calendar tools and task trackers are **enablers of the Planning Fallacy**:
-1. **Silent Extensions**: Moving a task from Tuesday to Friday has zero visual or behavioral penalty.
-2. **Loss of History**: The original plan is overwritten and forgotten.
-3. **No Retrospective Analysis**: Users run into the exact same issues (e.g. library bugs, client delays) repeatedly without realizing the pattern.
-
-**Drift** introduces a behavioral barrier to delay:
-* Every time a deadline shifts, you must supply the context (text or voice-first description).
-* An AI coach categorizes the root cause, rates the severity, and cross-references your history.
-* The system schedules a mandatory calendar recovery block to ensure you actively pay for the extension in time.
+Unlike traditional task managers that enable silent schedule slippage, Drift introduces cognitive friction: every deadline extension requires a multimodal (voice or text) justification. The platform utilizes advanced AI analysis to map delay root causes against historical patterns, recalculates task risk scores in real-time, and dynamically generates catch-up work sessions using a deterministic scheduling algorithm.
 
 ---
 
-## 🛠️ System Architecture
+## 🧠 System Architecture & Data Flow
 
-The following diagram illustrates the flow of a deadline extension inside the Drift system, leveraging the **FastAPI** backend, the **SQLite** database, and the **Gemini 1.5 Flash API** for audio processing.
+The following sequence diagram illustrates the lifecycle of a deadline extension request, from browser audio capture to structured AI reflection, culminating in the recalculation of the user's recovery schedule.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User
-    participant Frontend as React SPA (Vite)
+    participant Frontend as React SPA (Vite/TS)
     participant API as FastAPI Backend
     participant Gemini as Gemini 1.5 Flash API
     participant DB as SQLite / SQLAlchemy
-
-    User->>Frontend: Perform voice-note extension (MediaRecorder API)
-    Frontend->>API: POST /api/tasks/{id}/extensions (FormData: WAV audio + payload)
+    
+    User->>Frontend: Records audio justification (MediaRecorder API)
+    Frontend->>API: POST /api/tasks/{id}/extensions (FormData: WAV + metadata)
     activate API
-    API->>DB: Query historical extension categories for User
-    DB-->>API: Return User extension history
-    API->>Gemini: GenerateContent (audio_bytes + custom prompt + history summary)
+    API->>DB: Query user's historical extension metrics & categories
+    DB-->>API: Return historical metrics
+    API->>Gemini: GenerateContent (audio_bytes + prompt template + history payload)
     activate Gemini
     Gemini-->>API: Return structured JSON {transcription, tag, reflection, severity}
     deactivate Gemini
     API->>DB: Save Extension entity (transcription, ai_tag, reflection, severity)
-    API->>API: Execute Greedy EDF Scheduler (calculate recovery blocks needed)
-    API->>DB: Save Schedule Suggestions & Intervention Banner state
-    API-->>Frontend: Return Extension JSON + updated ScheduleBlocks
+    API->>API: Execute Greedy EDF Scheduler (re-allocate catch-up slots)
+    API->>DB: Update Schedule Suggestions & Intervention Logs
+    API-->>Frontend: Return Extension details + updated ScheduleBlocks
     deactivate API
-    Frontend-->>User: Play waveform, display AI Reflection, and render new schedule cards
+    Frontend-->>User: Render updated dynamic calendar & AI coach feedback
 ```
 
 ---
 
-## 🚀 Core Algorithmic & AI Engines
+## 🛠️ Core Engineering & Algorithmic Implementations
 
-Drift implements four core algorithmic services designed for maximum technical elegance and whiteboard-level logic clarity.
-
-### 1. Drift Risk Engine (Heuristic Probability Model)
-The Drift Risk Engine calculates a **Drift Probability Score (0–100%)** live in 500ms as the user types task details in the form. It uses a deterministic heuristic weighting model:
+### 1. Real-Time Risk Prevention Engine (Heuristic Probability Model)
+The Drift Risk Engine calculates a **Drift Probability Score (0–100%)** sub-500ms as the user types task metadata. The engine uses a deterministic heuristic weighting model:
 
 $$\text{Drift Score} = (0.40 \cdot R_{category}) + (0.20 \cdot R_{global}) + (0.20 \cdot R_{keyword}) + (0.20 \cdot F_{tightness})$$
 
@@ -73,219 +62,142 @@ Where:
     0.5 \cdot \left(\frac{D_{avg}}{D_{given}}\right) & \text{if } D_{given} \ge D_{avg} 
   \end{cases}$$
 
-### 2. Smart Extension Coach with Voice Input
-When a user requests a deadline extension, they must provide a justification. Drift supports a **multimodal voice pipeline**:
-* Captured via the browser **MediaRecorder API** with active CSS canvas waveforms.
-* Audio payload (WAV) is sent directly to FastAPI, which forwards the raw bytes and mime-type alongside the user's historical summary to **Gemini 1.5 Flash** using the Google GenAI SDK.
-* Gemini performs simultaneous word-for-word transcription and behavioral root-cause analysis, returning structured JSON containing:
-  - **AI Tag**: Classified into one of 5 root causes (`Technical Blocker`, `Underestimated Effort`, `External Dependency`, `Scope Creep`, `Personal`).
-  - **AI Reflection**: A personalized, constructive suggestion mapping current failure reasons against previous history (e.g. *"This is the 3rd time a library dependency blocked you — plan dedicated spike research next time"*).
-  - **Severity Rating**: Scaling from 1 (unavoidable deviation) to 3 (preventable behavioral pattern).
+### 2. Multimodal AI Handoff & Cognitive Coaching
+When requesting an extension, the user must record a justification via the browser's **MediaRecorder API**.
+* **Audio Pipeline**: Raw WAV files are sent directly to the FastAPI server, which streams them alongside the user's historical summary using the **Google GenAI SDK** to the Gemini 1.5 Flash API.
+* **Structured Response Schema**: The model returns a typed JSON payload classifying the blocker into root causes (`Technical Blocker`, `Underestimated Effort`, `External Dependency`, `Scope Creep`, `Personal`), outputting a constructive behavioral coaching advice based on historical tendencies, and assigning a severity rating (1–3).
 
-### 3. Calendar Rescue Scheduler (Greedy Earliest-Deadline-First)
-To enforce accountability, Drift automatically schedules **Rescue Blocks** to catch up.
-* **Time Penalty**: For every 1 day a deadline is extended, Drift schedules **2 hours** of focused work.
-* **Algorithm**: A greedy **Earliest-Deadline-First (EDF)** scheduler.
-  - Retrieves all active tasks for the user, sorted by `current_deadline` ascending.
-  - Beginning on the next calendar day (tomorrow), it loops through tasks and attempts to fit the required 2-hour blocks into open weekday slots (Monday–Friday, 9:00 AM – 6:00 PM).
-  - Skips lunch (1:00 PM – 2:00 PM), yielding four clean scheduling slots: `09:00-11:00`, `11:00-13:00`, `14:00-16:00`, and `16:00-18:00`.
-  - Higher-priority tasks (earlier deadlines) secure slots first. Lower-priority tasks search chronologically and wrap around existing slots, up to a 60-day threshold.
+### 3. Dynamic Recovery Planner (Greedy Earliest-Deadline-First Scheduler)
+To enforce scheduling accountability, Drift dynamically books **Rescue Blocks** to compensate for delays.
+* **Time Penalty Formula**: Every 1 day of deadline extension triggers **2 hours** of locked, focused catch-up work.
+* **EDF Algorithm**:
+  - Retrieves active tasks, sorting them by `current_deadline` ascending.
+  - Loops chronologically beginning on the next calendar day (skipping weekends).
+  - Allocates 2-hour blocks within standard business hours (9:00 AM – 6:00 PM), skipping lunch (1:00 PM – 2:00 PM).
+  - Resolves overlaps by prioritizing tasks with closer deadlines and wrapping lower-priority tasks chronologically.
 
-### 4. Proactive Intervention Alerts
-A background analyzer runs on frontend page loads to capture high-risk tasks and alert users:
-* **Rule A**: Active tasks due within 48h with `0` checked checklist items in the description.
-* **Rule B**: Tasks with a Drift Score $> 70\%$ due within 7 days.
-* **Rule C**: Any task that has been extended $\ge 3$ times.
-* Banners are rendered as elegant sliding headers that link directly to calendar recovery plans.
+### 4. Proactive Intervention Engine
+A backend evaluation job monitors task health on page load and generates dismissible sliding banners for three distinct triggers:
+* **Checklist Stagnation**: Task is due within 48 hours and has `0` completed checklist items.
+* **High-Risk Profiles**: Task has a computed Drift Score $> 70\%$ and is due within 7 days.
+* **Frequent Delays**: Task has been extended $\ge 3$ times.
 
 ---
 
-## 🗄️ Database Architecture & Schema
+## 🗄️ Database Architecture
 
-Drift uses SQLAlchemy to bridge models to SQLite (for local dev) or PostgreSQL.
+The schema is built using SQLAlchemy models mapped to a local SQLite database (for development) or PostgreSQL (for production).
 
 | Table | Attribute | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **users** | `id` | Integer | PK, Index | Unique user ID |
+| **users** | `id` | Integer | PK, Index | Unique user identifier |
 | | `email` | String | Unique, Index, Not Null | Account email |
 | | `password_hash` | String | Not Null | Bcrypt hashed password |
 | | `name` | String | Not Null | User profile name |
-| | `created_at` | DateTime | Default UTC Now | Signup date |
-| **tasks** | `id` | Integer | PK, Index | Unique task ID |
+| | `created_at` | DateTime | Default UTC Now | Signup timestamp |
+| **tasks** | `id` | Integer | PK, Index | Unique task identifier |
 | | `user_id` | Integer | FK -> `users.id`, Cascade | Owner ID |
 | | `title` | String | Not Null | Task title |
 | | `description` | Text | Nullable | Task description & checklist |
-| | `category` | String | Not Null | e.g. Development, Design |
-| | `original_deadline` | DateTime | Not Null | Initial deadline |
-| | `current_deadline` | DateTime | Not Null | Shifted deadline |
+| | `category` | String | Not Null | e.g., Development, Design |
+| | `original_deadline` | DateTime | Not Null | Initial deadline timestamp |
+| | `current_deadline` | DateTime | Not Null | Current shifted deadline |
 | | `status` | String | Default 'active' | active, completed, overdue |
 | | `drift_score` | Integer | Default 50 | Calculated risk % (0-100) |
-| | `drift_explanation`| Text | Nullable | Human readable risk prompt |
-| | `created_at` | DateTime | Default UTC Now | Task creation date |
-| **extensions** | `id` | Integer | PK, Index | Unique extension ID |
-| | `task_id` | Integer | FK -> `tasks.id`, Cascade | Associated task |
-| | `extended_by_days`| Integer | Not Null | Duration of push |
+| | `drift_explanation`| Text | Nullable | Detail explanation of risk score |
+| **extensions** | `id` | Integer | PK, Index | Unique extension identifier |
+| | `task_id` | Integer | FK -> `tasks.id`, Cascade | Mapped task ID |
+| | `extended_by_days`| Integer | Not Null | Extended duration |
 | | `raw_reason` | Text | Nullable | Typed reason text |
 | | `raw_transcription`| Text | Nullable | Audio transcribed text |
-| | `ai_tag` | String | Nullable | Coach classified tag |
-| | `ai_reflection` | Text | Nullable | Coach constructive response |
+| | `ai_tag` | String | Nullable | Classified tag from Gemini |
+| | `ai_reflection` | Text | Nullable | AI coaching feedback |
 | | `severity` | Integer | Nullable (1-3) | Impact level |
 | | `input_method` | String | Not Null | voice or text |
-| | `timestamp` | DateTime | Default UTC Now | Push time |
-| **schedule_suggestions** | `id` | Integer | PK, Index | Unique suggestion ID |
-| | `task_id` | Integer | FK -> `tasks.id`, Cascade | Associated task |
-| | `suggested_blocks`| JSON | Not Null | Array of `{start, end, label}` |
-| | `generated_at` | DateTime | Default UTC Now | Creation timestamp |
-| | `auto_triggered` | Boolean | Default True | Autogenerated by shift |
-| **intervention_logs** | `id` | Integer | PK, Index | Unique intervention ID |
-| | `user_id` | Integer | FK -> `users.id`, Cascade | User ID |
-| | `task_id` | Integer | FK -> `tasks.id`, Nullable | Associated task |
+| | `timestamp` | DateTime | Default UTC Now | Extension request timestamp |
+| **schedule_suggestions** | `id` | Integer | PK, Index | Unique identifier |
+| | `task_id` | Integer | FK -> `tasks.id`, Cascade | Mapped task ID |
+| | `suggested_blocks`| JSON | Not Null | Structured array of `{start, end, label}` |
+| | `generated_at` | DateTime | Default UTC Now | Recalculation timestamp |
+| **intervention_logs** | `id` | Integer | PK, Index | Unique identifier |
+| | `user_id` | Integer | FK -> `users.id`, Cascade | Owner ID |
+| | `task_id` | Integer | FK -> `tasks.id`, Nullable | Mapped task ID |
 | | `intervention_type`| String | Not Null | zero_subtasks, high_drift, many_extensions |
-| | `message` | Text | Not Null | Banner text |
-| | `dismissed` | Boolean | Default False | Is banner closed |
-| | `created_at` | DateTime | Default UTC Now | Evaluation date |
+| | `message` | Text | Not Null | Banner display text |
+| | `dismissed` | Boolean | Default False | Banner status |
 
 ---
 
 ## 📡 REST API Specifications
 
-### Authentication Routes
-* `POST /api/auth/register` - Create user. Payload: `{ email, password, name }`
-* `POST /api/auth/login` - Authenticate & obtain JWT. Payload: `{ email, password }` -> Returns `{ access_token, token_type }`
-* `GET /api/auth/me` - Get profile of authenticated user. Header: `Authorization: Bearer <token>`
+### Authentication
+* `POST /api/auth/register` — Standard registration. Payload: `{ email, password, name }`
+* `POST /api/auth/login` — Authentication endpoint. Payload: `{ email, password }` -> Returns `{ access_token, token_type }`
+* `GET /api/auth/me` — Fetches current user profile from JWT payload in headers.
 
-### Tasks Routes
-* `GET /api/tasks` - List all user tasks.
-* `POST /api/tasks` - Create task. Payload: `{ title, description, category, current_deadline }` (Autocalculates Drift Score)
-* `GET /api/tasks/{id}` - Fetch detailed task schema with full extension timeline list and schedules.
-* `PUT /api/tasks/{id}` - Modify details or complete task.
-* `DELETE /api/tasks/{id}` - Remove task.
-* `POST /api/tasks/preview-drift` - Preview Drift Score before saving. Payload: `{ title, category, deadline }`
+### Task Management
+* `GET /api/tasks` — Lists user's active/completed tasks.
+* `POST /api/tasks` — Creates new task and triggers risk calculation. Payload: `{ title, description, category, current_deadline }`
+* `GET /api/tasks/{id}` — Fetches detailed task info with historical timeline and scheduled blocks.
+* `PUT /api/tasks/{id}` — Updates task details or marks as completed.
+* `DELETE /api/tasks/{id}` — Deletes task.
+* `POST /api/tasks/preview-drift` — Debounced pre-submit risk preview. Payload: `{ title, category, deadline }`
 
-### Extension & Coach Routes
-* `POST /api/tasks/{id}/extensions` - Log a new deadline shift. Accepts multipart form-data (audio file `audio` plus form fields `extended_by_days` and `input_method`). Invokes Gemini 1.5 Flash, updates task deadline, and runs scheduler.
-
-### Schedule Suggestions
-* `GET /api/schedule` - Fetch current rescue schedule blocks sorted chronologically.
-* `POST /api/schedule/regenerate` - Manually trigger EDF schedule recalculation across all active tasks.
-
-### Intervention Banners
-* `GET /api/interventions` - Fetch active, undismissed alert messages.
-* `POST /api/interventions/{id}/dismiss` - Dismiss specific warning banner.
-
-### Insights Dashboard
-* `GET /api/insights` - Returns general metrics (streaks, average drift, common tags), tag distribution count arrays, historical drift line chart points, category-by-category extension rate metrics, and the Drift Hall of Fame.
-
----
-
-## 📂 Project Directory Structure
-
-```text
-DRIFT 2.0/
-├── drift-backend/
-│   ├── app/
-│   │   ├── database.py       # SQLAlchemy engine, session maker & Base schema
-│   │   ├── models.py         # Declarative mapping models
-│   │   ├── schemas.py        # Pydantic validation schemas
-│   │   ├── auth.py           # JWT generation, token verification, password bcrypt
-│   │   ├── routers/
-│   │   │   ├── tasks.py      # CRUD, live risk engine preview endpoints
-│   │   │   ├── extensions.py # Extension logging, Gemini coach execution, schedule trigger
-│   │   │   ├── schedule.py   # Schedule blocks retrieval & recalculations
-│   │   │   ├── insights.py   # Stats compilers & Hall of Fame list
-│   │   │   └── interventions.py # Alert banner fetch and dismiss endpoints
-│   │   ├── services/
-│   │   │   ├── drift_engine.py  # Heuristic category/keyword/tightness risk model
-│   │   │   ├── gemini_service.py# AI multimodal audio transcription & coach reflections
-│   │   │   ├── scheduler.py     # Earliest-Deadline-First weekday allocation algorithm
-│   │   │   └── intervention_engine.py # Evaluation checks for active tasks
-│   │   └── main.py           # FastAPI config, CORS setup, router registrations
-│   ├── tests/
-│   │   ├── test_services.py  # Unit tests for services (using in-memory db)
-│   │   └── test_gemini_service.py # Gemini mock tests
-│   ├── requirements.txt      # Backend Python packages
-│   └── .env.example          # Template environment parameters
-│
-└── drift-frontend/
-    ├── src/
-    │   ├── api/
-    │   │   └── client.ts     # Axios instance configured with JWT interceptors
-    │   ├── types/
-    │   │   └── index.ts      # TypeScript interfaces mirroring API schema shapes
-    │   ├── hooks/
-    │   │   ├── useDriftScore.ts # Form custom hook supporting debounce live calculations
-    │   │   └── useIntervention.ts # Active alert hook for marquee alerts
-    │   ├── components/
-    │   │   ├── DriftScoreBadge.tsx # Custom SVG radial progress gauges
-    │   │   ├── InterventionBanner.tsx # Dynamic alert carousel banners
-    │   │   ├── TimelineView.tsx # Horizontal deadline delay trail chart
-    │   │   ├── ScheduleBlocks.tsx # Custom weekday calendar blocks
-    │   │   └── SkeletonLoader.tsx # Premium fallback loaders
-    │   ├── pages/
-    │   │   ├── Dashboard.tsx  # General tasks list & current highlights
-    │   │   ├── NewTask.tsx    # Task form with live debounce gauges
-    │   │   ├── TaskDetail.tsx # Task overview, deadline extension panel, delay timeline
-    │   │   ├── CalendarPage.tsx # Timeline visualization of EDF allocations
-    │   │   ├── Insights.tsx   # Premium analytics widgets & Hall of Fame
-    │   │   ├── Login.tsx
-    │   │   └── Register.tsx
-    │   ├── App.tsx           # Context providers (auth), routing, main shell template
-    │   ├── index.css         # Modern styling setup (Inter fonts, glassmorphism)
-    │   └── main.tsx          # React bootloader
-    ├── tailwind.config.js
-    ├── postcss.config.js
-    ├── tsconfig.json
-    ├── vite.config.ts
-    └── index.html
-```
+### Extensions & Scheduling
+* `POST /api/tasks/{id}/extensions` — Logs a deadline shift. Multi-part form-data: audio blob (optional), text reason (optional), `extended_by_days`, `input_method`. Triggers Gemini analysis and schedules rescue blocks.
+* `GET /api/schedule` — Returns active rescue schedule blocks.
+* `POST /api/schedule/regenerate` — Manually triggers greedy EDF rescheduling.
+* `GET /api/interventions` — Fetches active warning logs.
+* `POST /api/interventions/{id}/dismiss` — Dismisses alert banner.
+* `GET /api/insights` — Compiles category ratios, severity distribution, delay timelines, and the "Hall of Fame".
 
 ---
 
 ## ⚙️ Setup and Installation
 
-### Prerequisite Environment
-* **Python 3.8+** installed.
-* **NodeJS (v18+)** and npm installed.
-* A **Google Gemini API Key** (generate one for free at [Google AI Studio](https://aistudio.google.com/)).
+### Prerequisites
+* **Node.js (v18+)** and npm.
+* **Python 3.8+** (Virtual environment configured).
+* A **Google Gemini API Key** (from [Google AI Studio](https://aistudio.google.com/)).
 
-### 1. Backend Service Setup
-1. Open a terminal and navigate to the backend folder:
+### 1. Backend Configuration
+1. Navigate to the backend directory:
    ```bash
    cd drift-backend
    ```
-2. Set up and activate a clean virtual environment:
+2. Create and activate your python virtual environment:
    ```bash
    python -m venv venv
-   # On Windows:
-   .\venv\Scripts\Activate.ps1
-   # On Unix/macOS:
+   # Windows:
+   .\venv\Scripts\activate
+   # macOS/Linux:
    source venv/bin/activate
    ```
-3. Install required packages:
+3. Install Python dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-4. Copy the environment template and insert your Gemini API Key:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and fill in:
+4. Configure environment parameters:
+   Create a `.env` file (copied from `.env.example`) and insert your API credentials:
    ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   SECRET_KEY=generate_a_random_jwt_secret_key_here
+   DATABASE_URL=sqlite:///./drift.db
+   JWT_SECRET_KEY=generate_your_secure_random_key_here
+   JWT_ALGORITHM=HS256
+   ACCESS_TOKEN_EXPIRE_MINUTES=1440
+   GEMINI_API_KEY=your_google_gemini_api_key
    ```
-5. Run the services test suite:
+5. Run backend unit tests:
    ```bash
    python -m pytest tests/
    ```
-6. Start the API web server:
+6. Start the development API server:
    ```bash
    python -m uvicorn app.main:app --reload --port 8000
    ```
-   Swagger API interactive testing environment is visible at `http://127.0.0.1:8000/docs`.
+   Interactive Swagger documentation is available at `http://127.0.0.1:8000/docs`.
 
-### 2. Frontend Client Setup
-1. Open a separate terminal and enter the frontend folder:
+### 2. Frontend Configuration
+1. Open a new terminal and navigate to the frontend directory:
    ```bash
    cd drift-frontend
    ```
@@ -293,7 +205,7 @@ DRIFT 2.0/
    ```bash
    npm install
    ```
-3. Run the development server:
+3. Run the client development server:
    ```bash
    npm run dev
    ```
@@ -301,35 +213,8 @@ DRIFT 2.0/
 
 ---
 
-## 🧑‍⚖️ 2-Minute Demo Presentation Script
+## 🔮 Production Roadmap
 
-Maximize impact in front of judges by following this tight presentation checklist:
-
-### Minute 0:00 - 0:30 | The Hook & The Problem
-* **Visual**: Show the Login screen. Click **Register** -> create a new user. It auto-logs in and lands on the beautiful dark-themed **Dashboard**.
-* **Talking Points**: *"Traditional task managers are enablers of the Planning Fallacy. They let you push dates out of sight with zero friction. We built Drift to introduce visual and psychological accountability into schedules. Let me show you how."*
-
-### Minute 0:30 - 1:00 | The Live Heuristic Engine
-* **Visual**: Click **New Task**. Begin typing the title: `"Integrate OAuth endpoints"`. Set the category to `"Development"`. Slide the deadline to 2 days from now.
-* **Observe**: The radial Drift Gauge jumps to a high percentage (e.g. 78%) and displays: *"You extend development tasks 78% of the time. Consider adding 2 days."*
-* **Talking Points**: *"As I type, our Heuristic engine computes a live Drift Risk Score. It factors in category rates, global completion stats, title keyword patterns, and deadline tightness. It catches planning fallacies *before* you press save."* Click **Create Task** with a description containing checklist items: `- [ ] setup routers`, `- [ ] write db code`.
-
-### Minute 1:00 - 1:30 | Proactive Intervention & The Rescue Scheduler
-* **Visual**: Return to the **Dashboard**. The top of the screen displays a marquee warning banner: *"Zero-subtask Warning: oauth endpoints due in 48 hours. Rescue schedule is ready."*
-* **Visual**: Click **View Rescue Schedule** to open the **CalendarPage**.
-* **Talking Points**: *"Drift doesn't wait for you to fail. Because this task is due in 48 hours and has zero checkboxes ticked off, our Proactive Intervention Engine raised an alert. It automatically invoked our greedy Earliest-Deadline-First Scheduler, carving out occupied blocks on your calendar to reserve 2-hour weekday catch-up blocks."*
-
-### Minute 1:30 - 2:00 | Multimodal AI Coach (The "Wow" Moment)
-* **Visual**: Click on the task to view the **Task Detail** page. Click **Extend Deadline**. Set extension to `3` days. Select **Voice Note**, click **Record**, and say: *"I got stuck setting up the OAuth callback URL because the client updated their library version."* Click stop (the CSS waveform stops).
-* **Observe**: The AI analysis screen appears showing:
-  - **Classified Tag**: `Technical Blocker` (rendered in vibrant red/purple tag)
-  - **AI Reflection**: *"This is the 3rd time a library issue blocked you — consider checking dependencies earlier."*
-  - **Severity**: `2`
-* **Talking Points**: *"This is the highlight: a voice-first reflection loop. We send the raw audio directly to Gemini 1.5 Flash, which transcribes it, categorizes it, and cross-references history to call out your exact bad habits. Once I save, our EDF Scheduler recalculates calendar slots in the background, and the historical deadline trail is updated below."* Click **Sync Timeline**. Show updated timeline trail.
-
----
-
-## 🔮 Roadmap & Future Scope
-1. **Bidirectional Calendar Sync**: Support automated read/write schedules to Google Calendar, Apple Calendar, and Microsoft Outlook.
-2. **Team Accountable Extensions**: For group workspaces. If a developer requests an extension, the AI Coach evaluates the blocker, flags it to the project manager, and adjusts dependent team workflows automatically.
-3. **Adaptive RL Weights**: Replace the heuristic risk weights with a reinforcement learning model that optimizes individual weights based on user behavioral feedback and completion patterns.
+* **Google & Outlook Calendar Sync**: Implement bidirectional syncing to dynamically write recovery blocks into standard workspace calendar schedules.
+* **Team-Level Friction Coaching**: Aggregate analytics across teams to identify organizational bottleneck dependencies (e.g., specific vendor delay rates) and automatically adjust downstream Gantt schedules.
+* **Adaptive Scoring System**: Transition the current heuristic risk model into a reinforcement learning framework that adapts coefficients based on individual user completion trends.

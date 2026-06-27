@@ -341,7 +341,7 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({ taskId, onNavigate }) =>
               <p className="text-xs text-drift-textMuted mt-1">Suggested time blocks to reconcile this task's deadline extension.</p>
             </div>
             
-            <ScheduleBlocks blocks={scheduleBlocks} />
+            <ScheduleBlocks blocks={scheduleBlocks} cols={1} />
           </div>
         </div>
 
