@@ -67,7 +67,7 @@ def get_fallback_analysis(reason_text: str, history_summary: str) -> dict:
     }
 
 
-def analyze_extension_text(reason_text: str, history_summary: str) -> dict:
+async def analyze_extension_text(reason_text: str, history_summary: str) -> dict:
     """
     Sends the extension text and user's history summary to Gemini.
     Returns: { "tag": str, "reflection": str, "severity": int, "transcription": str }
@@ -80,23 +80,23 @@ def analyze_extension_text(reason_text: str, history_summary: str) -> dict:
     
     The user is extending their task's deadline and gave the following reason:
     "{reason_text}"
-
+ 
     Here is a summary of the user's history of extensions:
     "{history_summary}"
-
+ 
     Analyze the user's reason and return a JSON object. You must classify the delay into one of the following tags:
     - 'Technical Blocker' (e.g., library issues, bugs, environment setup)
     - 'Underestimated Effort' (e.g., took longer, coding was harder than thought)
     - 'External Dependency' (e.g., waiting for client/manager/team feedback or API access)
     - 'Scope Creep' (e.g., adding extra features, redesigning halfway)
     - 'Personal' (e.g., sick, tired, personal schedule conflicts)
-
+ 
     Create a helpful one-sentence reflection referencing their history. For example:
     "This is the third time a library issue blocked you — consider spiking dependencies earlier."
     If history is empty, provide a constructive reflection on how to avoid this issue next time.
     
     Rate the severity of this extension from 1 (minor/unavoidable) to 3 (critical/avoidable pattern).
-
+ 
     Return EXACTLY a JSON object with these keys:
     {{
         "tag": "one of the 5 categories listed above",
@@ -106,7 +106,7 @@ def analyze_extension_text(reason_text: str, history_summary: str) -> dict:
     """
     
     try:
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model='gemini-1.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -126,7 +126,7 @@ def analyze_extension_text(reason_text: str, history_summary: str) -> dict:
         return get_fallback_analysis(reason_text, history_summary)
 
 
-def analyze_extension_audio(audio_bytes: bytes, mime_type: str, history_summary: str) -> dict:
+async def analyze_extension_audio(audio_bytes: bytes, mime_type: str, history_summary: str) -> dict:
     """
     Sends the voice note (audio bytes) and history summary to Gemini in a single API call.
     Transcribes the audio, classifies the delay, and generates a reflection.
@@ -144,20 +144,20 @@ def analyze_extension_audio(audio_bytes: bytes, mime_type: str, history_summary:
     
     Here is a summary of the user's history of extensions:
     "{history_summary}"
-
+ 
     Classify the reason into one of these tags:
     - 'Technical Blocker'
     - 'Underestimated Effort'
     - 'External Dependency'
     - 'Scope Creep'
     - 'Personal'
-
+ 
     Write a helpful one-sentence reflection referencing their history. For example:
     "This is the third time a library issue blocked you — consider spiking dependencies earlier."
     If history is empty, provide a constructive reflection on how to avoid this issue next time.
     
     Rate the severity from 1 (minor/unavoidable) to 3 (critical/avoidable pattern).
-
+ 
     Return EXACTLY a JSON object with these keys:
     {{
         "transcription": "the exact word-for-word text transcription of the audio",
@@ -177,7 +177,7 @@ def analyze_extension_audio(audio_bytes: bytes, mime_type: str, history_summary:
             prompt
         ]
         
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model='gemini-1.5-flash',
             contents=contents,
             config=types.GenerateContentConfig(

@@ -1,47 +1,57 @@
 import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..database import get_db
+from ..database import get_async_db
 from .. import models, schemas, auth
 from ..services.drift_engine import calculate_drift_score
 
 router = APIRouter(prefix="/api/tasks", tags=["Tasks"])
 
 
-def sync_task_statuses(db: Session, user_id: int):
+async def sync_task_statuses(db: AsyncSession, user_id: int):
     """
     Auto-computes server-side status:
     If current_deadline has passed and task is still 'active', mark as 'overdue'.
     """
     now = datetime.datetime.utcnow()
-    overdue_tasks = (
-        db.query(models.Task)
-        .filter(
+    result = await db.execute(
+        select(models.Task).filter(
             models.Task.user_id == user_id,
             models.Task.status == "active",
             models.Task.current_deadline < now,
         )
-        .all()
     )
+    overdue_tasks = result.scalars().all()
     for task in overdue_tasks:
         task.status = "overdue"
     if overdue_tasks:
-        db.commit()
+        await db.commit()
 
 
 @router.get("", response_model=List[schemas.TaskOut])
-def get_tasks(
-    db: Session = Depends(get_db),
+async def get_tasks(
+    db: AsyncSession = Depends(get_async_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """
     Retrieve all tasks for the current user.
     Auto-groups tasks by status (overdue/due soon/active) in the frontend.
     """
-    sync_task_statuses(db, current_user.id)
-    tasks = db.query(models.Task).filter(models.Task.user_id == current_user.id).all()
+    await sync_task_statuses(db, current_user.id)
+    
+    result = await db.execute(
+        select(models.Task)
+        .filter(models.Task.user_id == current_user.id)
+        .options(
+            selectinload(models.Task.extensions),
+            selectinload(models.Task.schedule_suggestions)
+        )
+    )
+    tasks = result.scalars().all()
     
     # Enrich response with extension count
     for t in tasks:
@@ -51,23 +61,25 @@ def get_tasks(
 
 
 @router.post("", response_model=schemas.TaskOut)
-def create_task(
+async def create_task(
     task_in: schemas.TaskCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """
     Create a new task, calculate its initial Drift Score & explanation,
     and save both original_deadline and current_deadline.
     """
-    # Calculate drift score preview using Drift Risk Engine
-    score, explanation = calculate_drift_score(
-        db=db,
-        user_id=current_user.id,
-        title=task_in.title,
-        category=task_in.category,
-        deadline=task_in.current_deadline
-    )
+    # Calculate drift score preview using Drift Risk Engine via synchronous DB fallback
+    from ..database import SessionLocal
+    with SessionLocal() as sync_db:
+        score, explanation = calculate_drift_score(
+            db=sync_db,
+            user_id=current_user.id,
+            title=task_in.title,
+            category=task_in.category,
+            deadline=task_in.current_deadline
+        )
 
     new_task = models.Task(
         user_id=current_user.id,
@@ -82,28 +94,43 @@ def create_task(
     )
     
     db.add(new_task)
-    db.commit()
-    db.refresh(new_task)
+    await db.commit()
     
-    new_task.extension_count = 0
-    return new_task
+    # Re-query task with selectinload to prevent lazy-loading errors on serialization
+    result_task = await db.execute(
+        select(models.Task)
+        .filter(models.Task.id == new_task.id)
+        .options(
+            selectinload(models.Task.extensions),
+            selectinload(models.Task.schedule_suggestions)
+        )
+    )
+    loaded_task = result_task.scalars().first()
+    loaded_task.extension_count = 0
+    return loaded_task
 
 
 @router.get("/{task_id}", response_model=schemas.TaskOut)
-def get_task(
+async def get_task(
     task_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """
     Get detailed view of a single task, containing extension logs and scheduler recommendations.
     """
-    sync_task_statuses(db, current_user.id)
-    task = (
-        db.query(models.Task)
+    await sync_task_statuses(db, current_user.id)
+    
+    result = await db.execute(
+        select(models.Task)
         .filter(models.Task.id == task_id, models.Task.user_id == current_user.id)
-        .first()
+        .options(
+            selectinload(models.Task.extensions),
+            selectinload(models.Task.schedule_suggestions)
+        )
     )
+    task = result.scalars().first()
+    
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -115,21 +142,26 @@ def get_task(
 
 
 @router.put("/{task_id}", response_model=schemas.TaskOut)
-def update_task(
+async def update_task(
     task_id: int,
     task_in: schemas.TaskUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """
     Update core details of the task. Note that deadlines are only extended 
     via the log-extension workflow, but users can complete the task here.
     """
-    task = (
-        db.query(models.Task)
+    result = await db.execute(
+        select(models.Task)
         .filter(models.Task.id == task_id, models.Task.user_id == current_user.id)
-        .first()
+        .options(
+            selectinload(models.Task.extensions),
+            selectinload(models.Task.schedule_suggestions)
+        )
     )
+    task = result.scalars().first()
+    
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -156,41 +188,55 @@ def update_task(
 
     # Note: original_deadline is immutable and current_deadline is only updated via Extensions router
     
-    # Recalculate Drift Score upon editing name/category
-    score, explanation = calculate_drift_score(
-        db=db,
-        user_id=current_user.id,
-        title=task.title,
-        category=task.category,
-        deadline=task.current_deadline
-    )
+    # Recalculate Drift Score upon editing name/category using synchronous DB session
+    from ..database import SessionLocal
+    with SessionLocal() as sync_db:
+        score, explanation = calculate_drift_score(
+            db=sync_db,
+            user_id=current_user.id,
+            title=task.title,
+            category=task.category,
+            deadline=task.current_deadline
+        )
     task.drift_score = score
     task.drift_explanation = explanation
 
-    db.commit()
-    db.refresh(task)
+    await db.commit()
     
-    task.extension_count = len(task.extensions)
-    return task
+    # Re-query task with selectinload to prevent lazy-loading errors on serialization
+    result_task = await db.execute(
+        select(models.Task)
+        .filter(models.Task.id == task.id)
+        .options(
+            selectinload(models.Task.extensions),
+            selectinload(models.Task.schedule_suggestions)
+        )
+    )
+    loaded_task = result_task.scalars().first()
+    loaded_task.extension_count = len(loaded_task.extensions)
+    return loaded_task
 
 
 @router.post("/drift-score-preview", response_model=schemas.DriftScorePreviewResponse)
-def get_drift_score_preview(
+async def get_drift_score_preview(
     payload: schemas.DriftScorePreviewRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """
     Live Drift Score Preview endpoint.
     Invoked dynamically as the user fills out the New Task creation form.
     """
-    score, explanation = calculate_drift_score(
-        db=db,
-        user_id=current_user.id,
-        title=payload.title,
-        category=payload.category,
-        deadline=payload.deadline
-    )
+    # Calculate score using synchronous DB fallback
+    from ..database import SessionLocal
+    with SessionLocal() as sync_db:
+        score, explanation = calculate_drift_score(
+            db=sync_db,
+            user_id=current_user.id,
+            title=payload.title,
+            category=payload.category,
+            deadline=payload.deadline
+        )
     
     return schemas.DriftScorePreviewResponse(
         drift_score=score,

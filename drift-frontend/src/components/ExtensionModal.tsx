@@ -115,6 +115,41 @@ export const ExtensionModal: React.FC<ExtensionModalProps> = ({
     }
   };
 
+  const pollExtensionStatus = async (extensionId: number) => {
+    const maxRetries = 15;
+    let attempts = 0;
+    
+    return new Promise<void>((resolve, reject) => {
+      const interval = setInterval(async () => {
+        attempts++;
+        try {
+          const response = await client.get(`/api/extensions/${extensionId}`);
+          const data = response.data;
+          
+          if (data.ai_tag !== 'processing') {
+            clearInterval(interval);
+            setAiResponse({
+              tag: data.ai_tag,
+              reflection: data.ai_reflection,
+              severity: data.severity,
+              transcription: data.raw_transcription,
+            });
+            resolve();
+          } else if (attempts >= maxRetries) {
+            clearInterval(interval);
+            setErrorMsg('AI Coach took too long to analyze this extension. Please check task detail logs.');
+            reject(new Error('Polling timed out'));
+          }
+        } catch (err) {
+          clearInterval(interval);
+          console.error('Polling failed:', err);
+          setErrorMsg('Failed to poll AI Coach feedback status.');
+          reject(err);
+        }
+      }, 1500);
+    });
+  };
+
   // Submit Text Reason Extension
   const submitTextExtension = async () => {
     if (!reasonText.trim()) {
@@ -136,15 +171,15 @@ export const ExtensionModal: React.FC<ExtensionModalProps> = ({
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      setAiResponse({
-        tag: response.data.ai_tag,
-        reflection: response.data.ai_reflection,
-        severity: response.data.severity,
-        transcription: response.data.raw_transcription,
-      });
+      const extId = response.data.extension_id;
+      if (extId) {
+        await pollExtensionStatus(extId);
+      } else {
+        throw new Error('Server did not return a valid extension ID.');
+      }
     } catch (err: any) {
       console.error('Text extension fail:', err);
-      setErrorMsg(err.response?.data?.detail || 'Failed to submit extension.');
+      setErrorMsg(err.response?.data?.detail || err.message || 'Failed to submit extension.');
     } finally {
       setLoading(false);
     }
@@ -167,15 +202,15 @@ export const ExtensionModal: React.FC<ExtensionModalProps> = ({
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      setAiResponse({
-        tag: response.data.ai_tag,
-        reflection: response.data.ai_reflection,
-        severity: response.data.severity,
-        transcription: response.data.raw_transcription,
-      });
+      const extId = response.data.extension_id;
+      if (extId) {
+        await pollExtensionStatus(extId);
+      } else {
+        throw new Error('Server did not return a valid extension ID.');
+      }
     } catch (err: any) {
       console.error('Voice extension fail:', err);
-      setErrorMsg(err.response?.data?.detail || 'Failed to analyze voice note.');
+      setErrorMsg(err.response?.data?.detail || err.message || 'Failed to analyze voice note.');
     } finally {
       setLoading(false);
     }

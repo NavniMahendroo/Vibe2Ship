@@ -23,24 +23,40 @@ sequenceDiagram
     actor User
     participant Frontend as React SPA (Vite/TS)
     participant API as FastAPI Backend
-    participant Gemini as Gemini 1.5 Flash API
-    participant DB as SQLite / SQLAlchemy
+    participant Worker as Background Task Worker
+    participant Gemini as Gemini 1.5 Flash API (async)
+    participant DB as Postgres/SQLite (AsyncSession)
     
-    User->>Frontend: Records audio justification (MediaRecorder API)
-    Frontend->>API: POST /api/tasks/{id}/extensions (FormData: WAV + metadata)
+    User->>Frontend: Records justification (voice/text)
+    Frontend->>API: POST /api/extensions/{task_id} (Form Data)
     activate API
-    API->>DB: Query user's historical extension metrics & categories
-    DB-->>API: Return historical metrics
-    API->>Gemini: GenerateContent (audio_bytes + prompt template + history payload)
-    activate Gemini
-    Gemini-->>API: Return structured JSON {transcription, tag, reflection, severity}
-    deactivate Gemini
-    API->>DB: Save Extension entity (transcription, ai_tag, reflection, severity)
-    API->>API: Execute Greedy EDF Scheduler (re-allocate catch-up slots)
-    API->>DB: Update Schedule Suggestions & Intervention Logs
-    API-->>Frontend: Return Extension details + updated ScheduleBlocks
+    API->>DB: Insert raw Extension record (ai_tag="processing")
+    DB-->>API: Return new Extension ID
+    API->>Worker: Dispatch background analysis job
+    API-->>Frontend: 202 Accepted {status: "processing", extension_id}
     deactivate API
-    Frontend-->>User: Render updated dynamic calendar & AI coach feedback
+    
+    par Background Job Processing
+        activate Worker
+        Worker->>DB: Fetch user history in category (sync session)
+        Worker->>Gemini: await generate_content()
+        activate Gemini
+        Gemini-->>Worker: Return transcription, tag, reflection, severity
+        deactivate Gemini
+        Worker->>DB: Update Extension (ai_tag, severity, reflection)
+        Worker->>DB: Recalculate Drift Score & update Task Deadline
+        Worker->>DB: Regenerate Rescue Schedule Suggestions (Greedy EDF)
+        deactivate Worker
+    and Client Status Polling
+        loop Every 1.5s (until status is no longer "processing")
+            Frontend->>API: GET /api/extensions/{id}
+            API->>DB: Query Extension status
+            DB-->>API: Return Extension state
+            API-->>Frontend: Return Extension JSON
+        end
+    end
+    
+    Frontend-->>User: Render dynamic calendar & AI coach feedback
 ```
 
 ---
@@ -62,10 +78,11 @@ Where:
     0.5 \cdot \left(\frac{D_{avg}}{D_{given}}\right) & \text{if } D_{given} \ge D_{avg} 
   \end{cases}$$
 
-### 2. Multimodal AI Handoff & Cognitive Coaching
-When requesting an extension, the user must record a justification via the browser's **MediaRecorder API**.
-* **Audio Pipeline**: Raw WAV files are sent directly to the FastAPI server, which streams them alongside the user's historical summary using the **Google GenAI SDK** to the Gemini 1.5 Flash API.
-* **Structured Response Schema**: The model returns a typed JSON payload classifying the blocker into root causes (`Technical Blocker`, `Underestimated Effort`, `External Dependency`, `Scope Creep`, `Personal`), outputting a constructive behavioral coaching advice based on historical tendencies, and assigning a severity rating (1–3).
+### 2. Asynchronous Multimodal AI Handoff & Cognitive Coaching
+When requesting an extension, the user records a justification via the browser's **MediaRecorder API** or types text:
+* **Non-Blocking Ingest (202 Accepted)**: The client's POST request is handled asynchronously. The server immediately saves the raw extension in a `processing` state and returns `202 Accepted`, preventing main thread blockers.
+* **Background Processing Queue**: FastAPI delegates the analysis job to its background task runner. The worker executes asynchronous Gemini 1.5 Flash content generation calls using the non-blocking **Google GenAI SDK** (`client.aio.models.generate_content`).
+* **Active Status Polling**: The React SPA client polls the `GET /api/extensions/{id}` endpoint every 1.5 seconds. Once the background worker completes (updating category classification, behavioral coaching reflections, and severity ratings), the client halts polling and dynamically renders the Coach Reflection modal.
 
 ### 3. Dynamic Recovery Planner (Greedy Earliest-Deadline-First Scheduler)
 To enforce scheduling accountability, Drift dynamically books **Rescue Blocks** to compensate for delays.

@@ -1,8 +1,9 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..database import get_db
+from ..database import get_async_db
 from .. import models, schemas, auth
 from ..services.intervention_engine import evaluate_interventions
 
@@ -10,32 +11,43 @@ router = APIRouter(prefix="/api/interventions", tags=["Interventions"])
 
 
 @router.get("", response_model=List[schemas.InterventionOut])
-def get_interventions(
-    db: Session = Depends(get_db),
+async def get_interventions(
+    db: AsyncSession = Depends(get_async_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """
     Fetch all active, undismissed behavioral alerts.
     Triggers the intervention check dynamically on every request.
+    Using a synchronous database session fallback for evaluation engine.
     """
-    alerts = evaluate_interventions(db, current_user.id)
+    from ..database import SessionLocal
+    with SessionLocal() as sync_db:
+        # Run synchronous intervention evaluation
+        evaluate_interventions(sync_db, current_user.id)
+        
+    # Query undismissed alerts asynchronously to return them
+    result = await db.execute(
+        select(models.InterventionLog)
+        .filter(models.InterventionLog.user_id == current_user.id, models.InterventionLog.dismissed == False)
+    )
+    alerts = result.scalars().all()
     return alerts
 
 
 @router.put("/{intervention_id}/dismiss", response_model=schemas.InterventionOut)
-def dismiss_intervention(
+async def dismiss_intervention(
     intervention_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_async_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """
     Dismiss a specific intervention banner, ensuring it is hidden in future queries.
     """
-    log = (
-        db.query(models.InterventionLog)
+    result = await db.execute(
+        select(models.InterventionLog)
         .filter(models.InterventionLog.id == intervention_id, models.InterventionLog.user_id == current_user.id)
-        .first()
     )
+    log = result.scalars().first()
     
     if not log:
         raise HTTPException(
@@ -44,6 +56,6 @@ def dismiss_intervention(
         )
         
     log.dismissed = True
-    db.commit()
-    db.refresh(log)
+    await db.commit()
+    await db.refresh(log)
     return log
