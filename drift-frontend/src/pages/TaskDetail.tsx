@@ -9,7 +9,8 @@ import {
   Keyboard, 
   AlertTriangle,
   Play,
-  RotateCcw
+  RotateCcw,
+  Trash2
 } from 'lucide-react';
 import client from '../api/client';
 import { Task, Extension, ScheduleBlock } from '../types';
@@ -29,6 +30,24 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({ taskId, onNavigate }) =>
   const [loading, setLoading] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [completing, setCompleting] = useState<boolean>(false);
+  const [deleting, setDeleting] = useState<boolean>(false);
+
+  const handleDeleteTask = async () => {
+    if (!task) return;
+    if (!window.confirm('Are you sure you want to delete this task? This will also remove all its extensions and scheduled rescue blocks.')) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await client.delete(`/api/tasks/${task.id}`);
+      onNavigate('dashboard');
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+      alert('Failed to delete task. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fetchTaskDetails = async () => {
     if (!taskId) return;
@@ -176,6 +195,15 @@ export const TaskDetail: React.FC<TaskDetailProps> = ({ taskId, onNavigate }) =>
               <span>Extend Deadline</span>
             </button>
           )}
+
+          <button
+            onClick={handleDeleteTask}
+            disabled={deleting}
+            className="flex items-center space-x-2 bg-red-500 bg-opacity-10 border border-red-500 border-opacity-20 text-red-400 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-500 hover:text-white transition-all duration-200 shadow-md"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>{deleting ? 'Deleting...' : 'Delete Task'}</span>
+          </button>
         </div>
       </div>
 

@@ -185,3 +185,28 @@ def get_drift_score_preview(
         drift_score=score,
         drift_explanation=explanation
     )
+
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """
+    Delete a specific task for the current user.
+    """
+    task = db.query(models.Task).filter(
+        models.Task.id == task_id, 
+        models.Task.user_id == current_user.id
+    ).first()
+    
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found or unauthorized access"
+        )
+        
+    db.delete(task)
+    db.commit()
+    return None

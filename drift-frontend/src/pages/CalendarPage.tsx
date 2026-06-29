@@ -14,6 +14,20 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const handleDeleteCalendarTask = async (taskId: number) => {
+    if (!window.confirm('Are you sure you want to delete this task? This will also remove all its extensions and scheduled rescue blocks.')) {
+      return;
+    }
+    try {
+      await client.delete(`/api/tasks/${taskId}`);
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+      setSelectedTask(null);
+    } catch (err) {
+      console.error('Failed to delete task from calendar:', err);
+      alert('Failed to delete task. Please try again.');
+    }
+  };
+
   useEffect(() => {
     const fetchTasks = async () => {
       try {
@@ -250,18 +264,26 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
               </div>
             </div>
 
-            <div className="mt-5 flex space-x-3">
+            <div className="mt-5 flex flex-col space-y-2">
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => onSelectTask(selectedTask.id)}
+                  className="flex-1 bg-drift-accent text-white py-2 rounded-lg text-xs font-semibold hover:bg-opacity-90 transition-colors duration-200"
+                >
+                  Open Details
+                </button>
+                <button
+                  onClick={() => setSelectedTask(null)}
+                  className="flex-1 bg-transparent border border-drift-border text-drift-textMuted py-2 rounded-lg text-xs font-semibold hover:bg-drift-border hover:text-white transition-colors duration-200"
+                >
+                  Close
+                </button>
+              </div>
               <button
-                onClick={() => onSelectTask(selectedTask.id)}
-                className="flex-1 bg-drift-accent text-white py-2 rounded-lg text-xs font-semibold hover:bg-opacity-90 transition-colors duration-200"
+                onClick={() => handleDeleteCalendarTask(selectedTask.id)}
+                className="w-full bg-red-500 bg-opacity-10 border border-red-500 border-opacity-20 text-red-400 py-2 rounded-lg text-xs font-semibold hover:bg-red-500 hover:text-white transition-colors duration-200"
               >
-                Open Details
-              </button>
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="flex-1 bg-transparent border border-drift-border text-drift-textMuted py-2 rounded-lg text-xs font-semibold hover:bg-drift-border hover:text-white transition-colors duration-200"
-              >
-                Close
+                Delete Task
               </button>
             </div>
           </div>
