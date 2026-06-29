@@ -13,6 +13,21 @@ Unlike traditional task managers that enable silent schedule slippage, Drift int
 
 ---
 
+## 🚀 Live Demo & Testing Accounts
+
+* **Live Web App (Vercel)**: [vibe2ship.vercel.app](https://vibe2ship.vercel.app/)
+* **Default Test Account**:
+  - **Email**: `test@gmail.com`
+  - **Password**: `user123`
+
+* **How to Register a Custom Account**:
+  1. Click **Get Started** or **Sign Up Free** on the landing page.
+  2. Fill in your name, email, and password, then click **Sign Up**.
+  3. You will be redirected back to the Home page.
+  4. Click **Sign In** in the top navigation bar, then log in using your new email and password to access your workspace!
+
+---
+
 ## 🧠 System Architecture & Data Flow
 
 The following sequence diagram illustrates the lifecycle of a deadline extension request, from browser audio capture to structured AI reflection, culminating in the recalculation of the user's recovery schedule.
