@@ -99,6 +99,9 @@ A backend evaluation job monitors task health on page load and generates dismiss
 * **High-Risk Profiles**: Task has a computed Drift Score $> 70\%$ and is due within 7 days.
 * **Frequent Delays**: Task has been extended $\ge 3$ times.
 
+### 5. Multi-Database Auto-Fallback & SQLite WAL Tuning
+To guarantee high availability and ease of local development, Drift tests the primary database connection on startup. If the PostgreSQL server is unreachable, it automatically swaps configurations to a local SQLite database (`drift.db`), resolving its file location using a dynamically generated absolute path inside the backend directory. To prevent locking issues between async route handlers (`aiosqlite`) and synchronous calculations, it automatically configures SQLite connection pragmas for **Write-Ahead Logging (WAL)** and **Normal Synchronization**.
+
 ---
 
 ## 🗄️ Database Architecture
@@ -109,7 +112,7 @@ The schema is built using SQLAlchemy models mapped to a local SQLite database (f
 | :--- | :--- | :--- | :--- | :--- |
 | **users** | `id` | Integer | PK, Index | Unique user identifier |
 | | `email` | String | Unique, Index, Not Null | Account email |
-| | `password_hash` | String | Not Null | Bcrypt hashed password |
+| | `password_hash` | String | Not Null | Secure PBKDF2-HMAC-SHA256 password hash (with dynamic import fallback to verify legacy bcrypt hashes without native binary DLL dependencies) |
 | | `name` | String | Not Null | User profile name |
 | | `created_at` | DateTime | Default UTC Now | Signup timestamp |
 | **tasks** | `id` | Integer | PK, Index | Unique task identifier |
@@ -211,6 +214,8 @@ The schema is built using SQLAlchemy models mapped to a local SQLite database (f
    ```bash
    python -m uvicorn app.main:app --reload --port 8000
    ```
+   *Note: If you are running on Windows with Python 3.14+, please omit the `--reload` flag (i.e. run `python -m uvicorn app.main:app --port 8000`) to avoid a known compatibility crash in the uvicorn reloader process.*
+
    Interactive Swagger documentation is available at `http://127.0.0.1:8000/docs`.
 
 ### 2. Frontend Configuration
