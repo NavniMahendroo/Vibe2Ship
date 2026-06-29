@@ -30,21 +30,24 @@ const Register: React.FC<RegisterProps> = ({ onNavigate, onRegisterSuccess }) =>
 
     try {
       // 1. Call register endpoint
-      await client.post('/api/auth/register', { name, email, password });
+      const registerResponse = await client.post('/api/auth/register', { name, email, password });
+      console.log('Register success:', registerResponse.data);
       
       // 2. Automatically log in on registration success
       const loginResponse = await client.post('/api/auth/login', { email, password });
+      console.log('Login success:', loginResponse.data);
       const { access_token } = loginResponse.data;
       
       // Fetch user profile info
-      const userProfile = await client.get('/api/auth/me', {
-        headers: { Authorization: `Bearer ${access_token}` }
-      });
+      const userProfile = await client.get('/api/auth/me');
+      console.log('User profile success:', userProfile.data);
       
       onRegisterSuccess(access_token, userProfile.data);
     } catch (err: any) {
       console.error('Registration failed:', err);
-      setErrorMsg(err.response?.data?.detail || 'Failed to register account.');
+      console.error('Error response:', err.response);
+      console.error('Error data:', err.response?.data);
+      setErrorMsg(err.response?.data?.detail || err.message || 'Failed to register account.');
     } finally {
       setLoading(false);
     }
