@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Sparkles, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import client from '../api/client';
 
 interface LoginProps {
@@ -37,13 +37,22 @@ const Login: React.FC<LoginProps> = ({ onNavigate, onLoginSuccess }) => {
       console.error('Login failed:', err);
       setErrorMsg(err.response?.data?.detail || 'Incorrect email or password.');
     } finally {
-      setLoading(false);
+      loading && setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-drift-bg px-4 relative overflow-hidden">
       
+      {/* Back to Landing Button */}
+      <button
+        onClick={() => onNavigate('landing')}
+        className="absolute top-6 left-6 flex items-center space-x-2 text-sm text-drift-textMuted hover:text-white transition-colors duration-200 bg-drift-card bg-opacity-40 backdrop-blur border border-drift-border px-3.5 py-2 rounded-lg z-20"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="font-semibold text-xs uppercase tracking-wider">Back</span>
+      </button>
+
       {/* Visual background ambient glow circles */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-drift-accent opacity-5 filter blur-[120px]" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-indigo-500 opacity-5 filter blur-[120px]" />

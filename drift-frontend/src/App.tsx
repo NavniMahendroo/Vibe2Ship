@@ -15,6 +15,7 @@ import client from './api/client';
 import { User } from './types';
 
 // Page components
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -26,7 +27,7 @@ import Insights from './pages/Insights';
 const App: React.FC = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<User | null>(null);
-  const [currentPage, setCurrentPage] = useState<string>('dashboard');
+  const [currentPage, setCurrentPage] = useState<string>('landing');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -36,6 +37,7 @@ const App: React.FC = () => {
     const validateToken = async () => {
       if (!token) {
         setLoading(false);
+        setCurrentPage('landing');
         return;
       }
       try {
@@ -70,7 +72,7 @@ const App: React.FC = () => {
     setToken(null);
     setUser(null);
     setSelectedTaskId(null);
-    setCurrentPage('dashboard');
+    setCurrentPage('landing');
   };
 
   const navigateToTaskDetail = (id: number) => {
@@ -97,11 +99,16 @@ const App: React.FC = () => {
         />
       );
     }
+    if (currentPage === 'login') {
+      return (
+        <Login 
+          onNavigate={setCurrentPage} 
+          onLoginSuccess={handleLoginSuccess} 
+        />
+      );
+    }
     return (
-      <Login 
-        onNavigate={setCurrentPage} 
-        onLoginSuccess={handleLoginSuccess} 
-      />
+      <Landing onNavigate={setCurrentPage} />
     );
   }
 
