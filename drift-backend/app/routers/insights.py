@@ -1,32 +1,27 @@
 from typing import List, Dict
 from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 import datetime
 
-from ..database import get_async_db
+from ..database import get_db
 from .. import models, schemas, auth
 
 router = APIRouter(prefix="/api/insights", tags=["Insights"])
 
 
 @router.get("", response_model=schemas.InsightsOut)
-async def get_insights(
-    db: AsyncSession = Depends(get_async_db),
+def get_insights(
+    db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     """
     Generate comprehensive user behavioral insight charts and stats.
     Computes completion streaks, AI coach category ratios, and the Drift Hall of Fame.
     """
-    result = await db.execute(
-        select(models.Task)
-        .filter(models.Task.user_id == current_user.id)
-        .options(selectinload(models.Task.extensions))
-    )
-    user_tasks = result.scalars().all()
+    user_tasks = db.query(models.Task).filter(
+        models.Task.user_id == current_user.id
+    ).all()
     total_tasks = len(user_tasks)
 
     # 1. Base Fallback for Zero Tasks
