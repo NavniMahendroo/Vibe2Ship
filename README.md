@@ -15,7 +15,7 @@ Unlike traditional task managers that enable silent schedule slippage, Drift int
 
 ## 🚀 Live Demo & Testing Accounts
 
-* **Live Web App (Vercel)**: [vibe2ship.vercel.app](https://vibe2ship.vercel.app/)
+* **Live Web App (Vercel)**: [vibe2ship.vercel.app](https://vibe2-ship-orpin.vercel.app/)
 * **Default Test Account**:
   - **Email**: `test@gmail.com`
   - **Password**: `user123`
