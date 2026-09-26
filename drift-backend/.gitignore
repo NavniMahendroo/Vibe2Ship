@@ -1,0 +1,33 @@
+# Environments
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Databases
+*.db
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs and text outputs
+*.log
+*_out.txt
+config_check.txt
+db_check.txt
+crash_traceback.txt
+
+# OS generated files
+.DS_Store
+Thumbs.db

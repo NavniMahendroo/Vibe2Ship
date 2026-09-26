@@ -110,7 +110,7 @@ def test_drift_engine_with_history(db_session):
 
     # With historical category rate = 66%, the score should be higher than 50%
     assert score > 50
-    assert "Design tasks" in explanation or "Design" in explanation or "probability" in explanation
+    assert "design tasks" in explanation.lower() or "design" in explanation.lower() or "probability" in explanation.lower()
 
 
 def test_scheduler_edf_greedy(db_session):

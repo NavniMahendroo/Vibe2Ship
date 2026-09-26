@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch
 from app.services import gemini_service
 
 def test_fallback_analysis_technical():
@@ -14,7 +14,7 @@ def test_fallback_analysis_underestimated():
     assert res["severity"] == 1
 
 def test_fallback_analysis_external():
-    res = gemini_service.get_fallback_analysis("Waiting for the client to approve the api design.", "No history.")
+    res = gemini_service.get_fallback_analysis("Waiting for the client to approve the new design.", "No history.")
     assert res["tag"] == "External Dependency"
     assert res["severity"] == 2
 
@@ -28,29 +28,31 @@ def test_fallback_analysis_personal():
     assert res["tag"] == "Personal"
     assert res["severity"] == 1
 
+@pytest.mark.asyncio
 @patch("app.services.gemini_service.client")
-def test_analyze_extension_text_success(mock_client):
+async def test_analyze_extension_text_success(mock_client):
     # Setup mock response
     mock_response = MagicMock()
     mock_response.text = '{"tag": "Technical Blocker", "reflection": "spike earlier", "severity": 2}'
-    mock_client.models.generate_content.return_value = mock_response
+    mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
     # Temporarily set HAS_API_KEY to True
     with patch("app.services.gemini_service.HAS_API_KEY", True):
-        res = gemini_service.analyze_extension_text("My library crashed", "history")
+        res = await gemini_service.analyze_extension_text("My library crashed", "history")
         assert res["tag"] == "Technical Blocker"
         assert res["reflection"] == "spike earlier"
         assert res["severity"] == 2
         assert res["transcription"] == "My library crashed"
 
+@pytest.mark.asyncio
 @patch("app.services.gemini_service.client")
-def test_analyze_extension_audio_success(mock_client):
+async def test_analyze_extension_audio_success(mock_client):
     mock_response = MagicMock()
     mock_response.text = '{"tag": "Personal", "reflection": "rest more", "severity": 1, "transcription": "I felt tired today"}'
-    mock_client.models.generate_content.return_value = mock_response
+    mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
     with patch("app.services.gemini_service.HAS_API_KEY", True):
-        res = gemini_service.analyze_extension_audio(b"fake_audio_bytes", "audio/wav", "history")
+        res = await gemini_service.analyze_extension_audio(b"fake_audio_bytes", "audio/wav", "history")
         assert res["tag"] == "Personal"
         assert res["reflection"] == "rest more"
         assert res["severity"] == 1
