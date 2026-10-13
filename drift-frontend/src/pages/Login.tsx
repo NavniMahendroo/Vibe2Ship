@@ -35,9 +35,13 @@ const Login: React.FC<LoginProps> = ({ onNavigate, onLoginSuccess }) => {
       onLoginSuccess(access_token, userProfile.data);
     } catch (err: any) {
       console.error('Login failed:', err);
-      setErrorMsg(err.response?.data?.detail || 'Incorrect email or password.');
+      if (!err.response) {
+        setErrorMsg('Unable to connect to backend server. Make sure the backend is running.');
+      } else {
+        setErrorMsg(err.response?.data?.detail || 'Incorrect email or password.');
+      }
     } finally {
-      loading && setLoading(false);
+      setLoading(false);
     }
   };
 

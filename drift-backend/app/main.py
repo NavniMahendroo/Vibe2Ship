@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from .database import engine, Base, get_db
+from .database import engine, Base, get_db, SessionLocal
 from . import models, schemas, auth
 from .routers import tasks, extensions, schedule, insights, interventions
 
@@ -14,6 +14,28 @@ app = FastAPI(
     description="Backend services for Drift — the deadline-rescue AI productivity app.",
     version="1.0.0"
 )
+
+@app.on_event("startup")
+def ensure_default_test_user():
+    db = SessionLocal()
+    try:
+        user = db.query(models.User).filter(models.User.email == "test@gmail.com").first()
+        if not user:
+            user = models.User(
+                email="test@gmail.com",
+                name="Test User",
+                password_hash=auth.get_password_hash("user123")
+            )
+            db.add(user)
+            db.commit()
+        elif not auth.verify_password("user123", user.password_hash):
+            # Update hash if hash format changed (e.g. from old bcrypt to pbkdf2)
+            user.password_hash = auth.get_password_hash("user123")
+            db.commit()
+    except Exception as e:
+        print(f"Error seeding default test user: {e}")
+    finally:
+        db.close()
 
 # CORS middleware configuration
 app.add_middleware(

@@ -45,9 +45,8 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // Calendar calculations
+  // Month length and starting weekday (0 = Sun)
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  // Get starting day index (0 for Sunday, 6 for Saturday)
   const startDayIndex = new Date(year, month, 1).getDay();
 
   const monthNames = [
@@ -65,7 +64,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
     setSelectedTask(null);
   };
 
-  // Filter tasks due within 48h
+  // Tasks due in the next 48h
   const now = new Date();
   const criticalTasks = tasks.filter((t) => {
     if (t.status !== 'active') return false;
@@ -80,12 +79,12 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
     return 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/50';
   };
 
-  // Generate date cells
+  // Build grid cells
   const renderCells = () => {
     const cells = [];
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-    // Weekday headers
+    // Day headers
     daysOfWeek.forEach((day) => {
       cells.push(
         <div key={`header-${day}`} className="text-center text-[10px] font-bold uppercase tracking-wider text-drift-textMuted py-2 border-b border-drift-border select-none">
@@ -94,18 +93,17 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
       );
     });
 
-    // Blank cells before starting day of the month
+    // Padding before the 1st of the month
     for (let i = 0; i < startDayIndex; i++) {
       cells.push(
         <div key={`empty-${i}`} className="bg-[#0b0b0e] bg-opacity-20 border border-drift-border min-h-[90px] md:min-h-[110px]" />
       );
     }
 
-    // Days of the month cells
+    // Days in current month
     for (let day = 1; day <= daysInMonth; day++) {
       const cellDate = new Date(year, month, day);
       
-      // Filter tasks due on this day
       const dayTasks = tasks.filter((task) => {
         const taskDate = new Date(task.current_deadline);
         return (
@@ -127,7 +125,6 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
             isToday ? 'bg-[#151524]' : 'bg-[#0f0f15]'
           }`}
         >
-          {/* Day Number */}
           <div className="flex justify-between items-center select-none">
             <span className={`text-xs font-semibold ${isToday ? 'text-drift-accent font-bold' : 'text-gray-400'}`}>
               {day}
@@ -139,7 +136,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
             )}
           </div>
 
-          {/* Task dots */}
+          {/* Task indicators */}
           <div className="flex flex-wrap gap-1.5 mt-2 max-h-[50px] overflow-y-auto">
             {dayTasks.map((task) => (
               <button
@@ -163,7 +160,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
   return (
     <div className="space-y-6">
       
-      {/* 1. Critical Deadline alerts banner */}
+      {/* 48h deadline alert */}
       {criticalTasks.length > 0 && (
         <div className="bg-rose-500 bg-opacity-10 border border-rose-500 border-opacity-35 rounded-xl p-4 flex items-start space-x-3.5 shadow-lg select-none">
           <div className="bg-rose-500 bg-opacity-10 p-2 rounded-lg text-rose-400">
@@ -192,7 +189,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
         </div>
       )}
 
-      {/* Title Header */}
+      {/* Header */}
       <div className="flex justify-between items-center border-b border-drift-border pb-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Rescue Calendar</h1>
@@ -200,7 +197,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
         </div>
       </div>
 
-      {/* 2. Month Selector Controls */}
+      {/* Month nav */}
       <div className="flex justify-between items-center bg-drift-card border border-drift-border p-4 rounded-xl shadow-md">
         <h2 className="text-lg font-bold text-white">
           {monthNames[month]} {year}
@@ -221,7 +218,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
         </div>
       </div>
 
-      {/* Grid Container */}
+      {/* Calendar grid */}
       <div className="grid grid-cols-7 bg-drift-card border border-drift-border rounded-xl shadow-xl overflow-hidden">
         {loading ? (
           <div className="col-span-7 py-20 flex flex-col items-center justify-center space-y-3">
@@ -233,7 +230,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ onNavigate, onSelect
         )}
       </div>
 
-      {/* 3. Popover Detail Modal widget for clicked task dot */}
+      {/* Task detail popover */}
       {selectedTask && (
         <div className="fixed inset-0 bg-[#07070b] bg-opacity-60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className="w-full max-w-sm bg-drift-card border border-drift-border rounded-xl shadow-2xl p-6 relative">
